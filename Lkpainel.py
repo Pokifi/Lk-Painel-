@@ -26,7 +26,7 @@ print("6: Sair")
 
 escolha = False
 while escolha == False:
- nivel = int(input("Qual op莽茫o: "))
+ nivel = int(input("Qual opção: "))
     
  if (nivel == 1):
     os.system("pkg update && pkg upgrade")
@@ -59,7 +59,7 @@ while escolha == False:
 
  escolha = False
  while escolha == False:
-   nivel = int(input("Qual op莽茫o: "))
+   nivel = int(input("Qual opção: "))
     
    if (nivel == 1):
         print("https://drive.google.com/u/0/uc?id=1FKHxk1jW1laWDdMKNspAlBCGSNdmW1KM&export=download")
@@ -105,7 +105,7 @@ while escolha == False:
 
  escolha = False
  while escolha == False:
-   nivel = int(input("Qual op莽茫o: "))
+   nivel = int(input("Qual opção: "))
     
    if (nivel == 1):
      os.system("pkg update && pkg upgrade")
@@ -138,7 +138,7 @@ while escolha == False:
 
  escolha = False
  while escolha == False:
-    nivel = int(input("Qual op莽茫o: "))
+    nivel = int(input("Qual opção: "))
     
     if (nivel == 1):
         print("https://drive.google.com/u/0/uc?id=1FKHxk1jW1laWDdMKNspAlBCGSNdmW1KM&export=download")
