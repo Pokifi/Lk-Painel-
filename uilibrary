@@ -1,0 +1,932 @@
+--[[
+Ultra UI Library v2.0
+Executor de Scripts com UI Premium
+]]
+
+local UltraUI = {}
+UltraUI.__index = UltraUI
+
+-- Biblioteca de animações Tween
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+-- Configurações globais
+UltraUI.Settings = {
+    AnimationSpeed = 0.25,
+    DefaultTheme = "Dark",
+    BlurBackground = true,
+    Watermark = "Ultra UI v2.0",
+    EnableSounds = true
+}
+
+-- Sistema de temas avançado
+UltraUI.Themes = {
+    Dark = {
+        Main = Color3.fromRGB(32, 34, 37),
+        Secondary = Color3.fromRGB(47, 49, 54),
+        Text = Color3.fromRGB(255, 255, 255),
+        Accent = Color3.fromRGB(0, 162, 255),
+        Shadow = Color3.fromRGB(0, 0, 0, 0.5),
+        Hover = Color3.fromRGB(66, 70, 77)
+    },
+    Light = {
+        Main = Color3.fromRGB(240, 240, 240),
+        Secondary = Color3.fromRGB(220, 220, 220),
+        Text = Color3.fromRGB(0, 0, 0),
+        Accent = Color3.fromRGB(0, 120, 215),
+        Shadow = Color3.fromRGB(0, 0, 0, 0.2),
+        Hover = Color3.fromRGB(200, 200, 200)
+    },
+    Purple = {
+        Main = Color3.fromRGB(40, 30, 50),
+        Secondary = Color3.fromRGB(60, 45, 75),
+        Text = Color3.fromRGB(255, 255, 255),
+        Accent = Color3.fromRGB(170, 80, 255),
+        Shadow = Color3.fromRGB(0, 0, 0, 0.5),
+        Hover = Color3.fromRGB(80, 60, 100)
+    }
+}
+
+-- Efeitos sonoros
+UltraUI.Sounds = {
+    Click = "rbxassetid://3579885182",
+    Toggle = "rbxassetid://3579885783",
+    Hover = "rbxassetid://3579886221",
+    Error = "rbxassetid://3579886654"
+}
+
+-- Função para criar instâncias com propriedades
+local function Create(className, properties)
+    local instance = Instance.new(className)
+    for prop, value in pairs(properties) do
+        instance[prop] = value
+    end
+    return instance
+end
+
+-- Sistema de animação fluida
+local function SmoothTween(instance, properties, duration, style, direction)
+    local tweenInfo = TweenInfo.new(
+        duration or UltraUI.Settings.AnimationSpeed,
+        style or Enum.EasingStyle.Quad,
+        direction or Enum.EasingDirection.Out
+    )
+    local tween = TweenService:Create(instance, tweenInfo, properties)
+    tween:Play()
+    return tween
+end
+
+-- Criação da janela principal
+function UltraUI.new(title, size, config)
+    local self = setmetatable({}, UltraUI)
+    
+    -- Configurações
+    self.Title = title or "Ultra UI"
+    self.Size = size or Vector2.new(500, 400)
+    self.Config = config or {}
+    self.Tabs = {}
+    self.CurrentTab = nil
+    self.Theme = UltraUI.Themes[UltraUI.Settings.DefaultTheme]
+    
+    -- Criar a janela principal
+    self.ScreenGui = Create("ScreenGui", {
+        Name = "UltraUI",
+        ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Global
+    })
+    
+    -- Efeito de blur no background (opcional)
+    if UltraUI.Settings.BlurBackground then
+        self.Blur = Create("BlurEffect", {
+            Name = "UIBlur",
+            Size = 10,
+            Parent = game:GetService("Lighting")
+        })
+    end
+    
+    -- Main container
+    self.MainFrame = Create("Frame", {
+        Name = "MainFrame",
+        Size = UDim2.new(0, self.Size.X, 0, self.Size.Y),
+        Position = UDim2.new(0.5, -self.Size.X/2, 0.5, -self.Size.Y/2),
+        BackgroundColor3 = self.Theme.Main,
+        ClipsDescendants = true,
+        Parent = self.ScreenGui
+    })
+    
+    -- Adicionar sombra
+    self.Shadow = Create("ImageLabel", {
+        Name = "Shadow",
+        Image = "rbxassetid://1316045217",
+        ImageColor3 = self.Theme.Shadow,
+        ImageTransparency = 0.5,
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(10, 10, 118, 118),
+        Size = UDim2.new(1, 20, 1, 20),
+        Position = UDim2.new(0, -10, 0, -10),
+        BackgroundTransparency = 1,
+        ZIndex = -1,
+        Parent = self.MainFrame
+    })
+    
+    -- Top bar
+    self.TopBar = Create("Frame", {
+        Name = "TopBar",
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundColor3 = self.Theme.Secondary,
+        BorderSizePixel = 0,
+        Parent = self.MainFrame
+    })
+    
+    -- Título
+    self.TitleLabel = Create("TextLabel", {
+        Name = "Title",
+        Text = self.Title,
+        TextColor3 = self.Theme.Text,
+        TextSize = 16,
+        Font = Enum.Font.GothamSemibold,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(0, 200, 1, 0),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = self.TopBar
+    })
+    
+    -- Watermark
+    self.Watermark = Create("TextLabel", {
+        Name = "Watermark",
+        Text = UltraUI.Settings.Watermark,
+        TextColor3 = self.Theme.Text,
+        TextTransparency = 0.5,
+        TextSize = 12,
+        Font = Enum.Font.Gotham,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -10, 0, 0),
+        Size = UDim2.new(0, 100, 1, 0),
+        TextXAlignment = Enum.TextXAlignment.Right,
+        Parent = self.TopBar
+    })
+    
+    -- Botão de fechar
+    self.CloseButton = Create("TextButton", {
+        Name = "CloseButton",
+        Text = "×",
+        TextColor3 = self.Theme.Text,
+        TextSize = 20,
+        Font = Enum.Font.GothamBold,
+        BackgroundColor3 = Color3.fromRGB(255, 70, 70),
+        Position = UDim2.new(1, -30, 0, 0),
+        Size = UDim2.new(0, 30, 0, 30),
+        BorderSizePixel = 0,
+        Parent = self.TopBar
+    })
+    
+    -- Botão de minimizar
+    self.MinimizeButton = Create("TextButton", {
+        Name = "MinimizeButton",
+        Text = "_",
+        TextColor3 = self.Theme.Text,
+        TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        BackgroundColor3 = self.Theme.Secondary,
+        Position = UDim2.new(1, -60, 0, 0),
+        Size = UDim2.new(0, 30, 0, 30),
+        BorderSizePixel = 0,
+        Parent = self.TopBar
+    })
+    
+    -- Container de guias
+    self.TabContainer = Create("Frame", {
+        Name = "TabContainer",
+        Size = UDim2.new(1, 0, 0, 40),
+        Position = UDim2.new(0, 0, 0, 30),
+        BackgroundColor3 = self.Theme.Secondary,
+        BorderSizePixel = 0,
+        Parent = self.MainFrame
+    })
+    
+    -- Lista de guias
+    self.TabList = Create("Frame", {
+        Name = "TabList",
+        Size = UDim2.new(1, -20, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        BackgroundTransparency = 1,
+        Parent = self.TabContainer
+    })
+    
+    -- Container de conteúdo
+    self.ContentContainer = Create("ScrollingFrame", {
+        Name = "Content",
+        Size = UDim2.new(1, 0, 1, -70),
+        Position = UDim2.new(0, 0, 0, 70),
+        BackgroundTransparency = 1,
+        ScrollBarThickness = 5,
+        ScrollBarImageColor3 = self.Theme.Accent,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        Parent = self.MainFrame
+    })
+    
+    -- Layout do conteúdo
+    self.ContentLayout = Create("UIListLayout", {
+        Name = "ContentLayout",
+        Padding = UDim.new(0, 10),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = self.ContentContainer
+    })
+    
+    -- Padding do conteúdo
+    self.ContentPadding = Create("UIPadding", {
+        Name = "ContentPadding",
+        PaddingLeft = UDim.new(0, 10),
+        PaddingRight = UDim.new(0, 10),
+        PaddingTop = UDim.new(0, 10),
+        Parent = self.ContentContainer
+    })
+    
+    -- Configurar eventos de arrastar
+    self:Dragify(self.TopBar)
+    
+    -- Configurar botões de fechar/minimizar
+    self.CloseButton.MouseButton1Click:Connect(function()
+        self:Close()
+    end)
+    
+    self.MinimizeButton.MouseButton1Click:Connect(function()
+        self:Minimize()
+    end)
+    
+    -- Efeitos hover
+    self:AddHoverEffect(self.CloseButton, Color3.fromRGB(255, 50, 50))
+    self:AddHoverEffect(self.MinimizeButton, self.Theme.Hover)
+    
+    -- Adicionar som (opcional)
+    if UltraUI.Settings.EnableSounds then
+        self:AddClickSound(self.CloseButton)
+        self:AddClickSound(self.MinimizeButton)
+    end
+    
+    return self
+end
+
+-- Função para arrastar a janela
+function UltraUI:Dragify(frame)
+    local dragging = false
+    local dragInput, dragStart, startPos
+    
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = self.MainFrame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            SmoothTween(self.MainFrame, {
+                Position = UDim2.new(
+                    startPos.X.Scale, 
+                    startPos.X.Offset + delta.X,
+                    startPos.Y.Scale,
+                    startPos.Y.Offset + delta.Y
+                )
+            }, 0.1)
+        end
+    end)
+end
+
+-- Adicionar efeito hover
+function UltraUI:AddHoverEffect(button, hoverColor)
+    local originalColor = button.BackgroundColor3
+    
+    button.MouseEnter:Connect(function()
+        SmoothTween(button, {BackgroundColor3 = hoverColor}, 0.15)
+    end)
+    
+    button.MouseLeave:Connect(function()
+        SmoothTween(button, {BackgroundColor3 = originalColor}, 0.15)
+    end)
+end
+
+-- Adicionar som de clique
+function UltraUI:AddClickSound(button)
+    button.MouseButton1Click:Connect(function()
+        local sound = Instance.new("Sound")
+        sound.SoundId = UltraUI.Sounds.Click
+        sound.Parent = button
+        sound:Play()
+        game:GetService("Debris"):AddItem(sound, sound.TimeLength)
+    end)
+end
+
+-- Fechar a UI
+function UltraUI:Close()
+    if self.Blur then
+        self.Blur:Destroy()
+    end
+    
+    SmoothTween(self.MainFrame, {
+        Size = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0)
+    }, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+    
+    wait(0.3)
+    self.ScreenGui:Destroy()
+end
+
+-- Minimizar a UI
+function UltraUI:Minimize()
+    if self.MainFrame.Size.Y.Offset == 70 then -- Se já estiver minimizado
+        SmoothTween(self.MainFrame, {
+            Size = UDim2.new(0, self.Size.X, 0, self.Size.Y)
+        }, 0.3, Enum.EasingStyle.Back)
+    else
+        SmoothTween(self.MainFrame, {
+            Size = UDim2.new(0, self.Size.X, 0, 70)
+        }, 0.3, Enum.EasingStyle.Back)
+    end
+end
+
+-- Adicionar nova guia
+function UltraUI:AddTab(name, icon)
+    local tabButton = Create("TextButton", {
+        Name = name,
+        Text = name,
+        TextColor3 = self.Theme.Text,
+        TextSize = 14,
+        Font = Enum.Font.GothamSemibold,
+        BackgroundColor3 = self.Theme.Secondary,
+        Size = UDim2.new(0, 100, 1, 0),
+        BorderSizePixel = 0,
+        Parent = self.TabList
+    })
+    
+    -- Indicador de guia ativa
+    local indicator = Create("Frame", {
+        Name = "Indicator",
+        Size = UDim2.new(1, 0, 0, 3),
+        Position = UDim2.new(0, 0, 1, -3),
+        BackgroundColor3 = self.Theme.Accent,
+        BorderSizePixel = 0,
+        Visible = false,
+        Parent = tabButton
+    })
+    
+    -- Conteúdo da guia
+    local tabContent = Create("Frame", {
+        Name = name,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Visible = false,
+        Parent = self.ContentContainer
+    })
+    
+    -- Layout do conteúdo da guia
+    local tabLayout = Create("UIListLayout", {
+        Name = "TabLayout",
+        Padding = UDim.new(0, 10),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = tabContent
+    })
+    
+    -- Padding do conteúdo da guia
+    local tabPadding = Create("UIPadding", {
+        Name = "TabPadding",
+        PaddingTop = UDim.new(0, 10),
+        Parent = tabContent
+    })
+    
+    -- Configurar evento de clique
+    tabButton.MouseButton1Click:Connect(function()
+        self:SwitchTab(tabContent, tabButton, indicator)
+    end)
+    
+    -- Efeito hover
+    self:AddHoverEffect(tabButton, self.Theme.Hover)
+    
+    -- Adicionar som (opcional)
+    if UltraUI.Settings.EnableSounds then
+        self:AddClickSound(tabButton)
+    end
+    
+    -- Se for a primeira guia, ativar por padrão
+    if #self.Tabs == 0 then
+        self:SwitchTab(tabContent, tabButton, indicator)
+    end
+    
+    -- Adicionar à lista de guias
+    table.insert(self.Tabs, {
+        Name = name,
+        Button = tabButton,
+        Content = tabContent,
+        Indicator = indicator
+    })
+    
+    -- Retornar a guia para adicionar elementos
+    return {
+        Content = tabContent,
+        AddButton = function(text, callback) return self:AddButton(tabContent, text, callback) end,
+        AddToggle = function(text, default, callback) return self:AddToggle(tabContent, text, default, callback) end,
+        AddDropdown = function(text, options, callback) return self:AddDropdown(tabContent, text, options, callback) end,
+        AddLabel = function(text) return self:AddLabel(tabContent, text) end,
+        AddSlider = function(text, min, max, default, callback) return self:AddSlider(tabContent, text, min, max, default, callback) end,
+        AddSection = function(text) return self:AddSection(tabContent, text) end
+    }
+end
+
+-- Alternar entre guias
+function UltraUI:SwitchTab(tabContent, tabButton, indicator)
+    -- Esconder todas as guias e indicadores
+    for _, tab in pairs(self.Tabs) do
+        tab.Content.Visible = false
+        tab.Indicator.Visible = false
+        SmoothTween(tab.Button, {BackgroundColor3 = self.Theme.Secondary}, 0.15)
+    end
+    
+    -- Mostrar a guia selecionada
+    tabContent.Visible = true
+    indicator.Visible = true
+    SmoothTween(tabButton, {BackgroundColor3 = self.Theme.Hover}, 0.15)
+    
+    -- Atualizar guia atual
+    self.CurrentTab = tabContent
+end
+
+-- Adicionar botão
+function UltraUI:AddButton(parent, text, callback)
+    local button = Create("TextButton", {
+        Name = text,
+        Text = text,
+        TextColor3 = self.Theme.Text,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        BackgroundColor3 = self.Theme.Secondary,
+        Size = UDim2.new(1, -20, 0, 35),
+        BorderSizePixel = 0,
+        Parent = parent
+    })
+    
+    -- Arredondar cantos
+    local corner = Create("UICorner", {
+        CornerRadius = UDim.new(0, 5),
+        Parent = button
+    })
+    
+    -- Efeito hover
+    self:AddHoverEffect(button, self.Theme.Hover)
+    
+    -- Configurar callback
+    button.MouseButton1Click:Connect(function()
+        if callback then
+            callback()
+        end
+    end)
+    
+    -- Adicionar som (opcional)
+    if UltraUI.Settings.EnableSounds then
+        self:AddClickSound(button)
+    end
+    
+    return button
+end
+
+-- Adicionar toggle
+function UltraUI:AddToggle(parent, text, default, callback)
+    local toggleFrame = Create("Frame", {
+        Name = text,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -20, 0, 30),
+        Parent = parent
+    })
+    
+    local label = Create("TextLabel", {
+        Name = "Label",
+        Text = text,
+        TextColor3 = self.Theme.Text,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0.7, 0, 1, 0),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = toggleFrame
+    })
+    
+    local toggleOuter = Create("Frame", {
+        Name = "ToggleOuter",
+        BackgroundColor3 = self.Theme.Secondary,
+        Size = UDim2.new(0, 50, 0, 25),
+        Position = UDim2.new(1, -50, 0.5, -12.5),
+        AnchorPoint = Vector2.new(1, 0.5),
+        Parent = toggleFrame
+    })
+    
+    local corner = Create("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = toggleOuter
+    })
+    
+    local toggleInner = Create("Frame", {
+        Name = "ToggleInner",
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        Size = UDim2.new(0, 21, 0, 21),
+        Position = default and UDim2.new(1, -23, 0.5, -10.5) or UDim2.new(0, 2, 0.5, -10.5),
+        AnchorPoint = Vector2.new(1, 0.5),
+        Parent = toggleOuter
+    })
+    
+    local innerCorner = Create("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = toggleInner
+    })
+    
+    local state = default or false
+    
+    local function updateToggle()
+        if state then
+            SmoothTween(toggleOuter, {BackgroundColor3 = self.Theme.Accent}, 0.15)
+            SmoothTween(toggleInner, {
+                Position = UDim2.new(1, -23, 0.5, -10.5)
+            }, 0.15)
+        else
+            SmoothTween(toggleOuter, {BackgroundColor3 = self.Theme.Secondary}, 0.15)
+            SmoothTween(toggleInner, {
+                Position = UDim2.new(0, 2, 0.5, -10.5)
+            }, 0.15)
+        end
+    end
+    
+    updateToggle()
+    
+    toggleOuter.MouseButton1Click:Connect(function()
+        state = not state
+        updateToggle()
+        
+        if UltraUI.Settings.EnableSounds then
+            local sound = Instance.new("Sound")
+            sound.SoundId = UltraUI.Sounds.Toggle
+            sound.Parent = toggleOuter
+            sound:Play()
+            game:GetService("Debris"):AddItem(sound, sound.TimeLength)
+        end
+        
+        if callback then
+            callback(state)
+        end
+    end)
+    
+    -- Efeito hover
+    self:AddHoverEffect(toggleOuter, self.Theme.Hover)
+    
+    return {
+        SetState = function(newState)
+            state = newState
+            updateToggle()
+        end,
+        GetState = function()
+            return state
+        end
+    }
+end
+
+-- Adicionar dropdown
+function UltraUI:AddDropdown(parent, text, options, callback)
+    local dropdownFrame = Create("Frame", {
+        Name = text,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -20, 0, 30),
+        Parent = parent
+    })
+    
+    local label = Create("TextLabel", {
+        Name = "Label",
+        Text = text,
+        TextColor3 = self.Theme.Text,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0.7, 0, 1, 0),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = dropdownFrame
+    })
+    
+    local dropdownButton = Create("TextButton", {
+        Name = "DropdownButton",
+        Text = options[1] or "Select",
+        TextColor3 = self.Theme.Text,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        BackgroundColor3 = self.Theme.Secondary,
+        Size = UDim2.new(0, 150, 0, 30),
+        Position = UDim2.new(1, -150, 0, 0),
+        AnchorPoint = Vector2.new(1, 0),
+        Parent = dropdownFrame
+    })
+    
+    local corner = Create("UICorner", {
+        CornerRadius = UDim.new(0, 5),
+        Parent = dropdownButton
+    })
+    
+    local dropdownList = Create("Frame", {
+        Name = "DropdownList",
+        BackgroundColor3 = self.Theme.Secondary,
+        Size = UDim2.new(1, 0, 0, 0),
+        Position = UDim2.new(0, 0, 1, 5),
+        Visible = false,
+        ClipsDescendants = true,
+        Parent = dropdownButton
+    })
+    
+    local listLayout = Create("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = dropdownList
+    })
+    
+    local listPadding = Create("UIPadding", {
+        PaddingTop = UDim.new(0, 5),
+        PaddingBottom = UDim.new(0, 5),
+        Parent = dropdownList
+    })
+    
+    local isOpen = false
+    
+    local function toggleDropdown()
+        isOpen = not isOpen
+        
+        if isOpen then
+            dropdownList.Visible = true
+            SmoothTween(dropdownList, {
+                Size = UDim2.new(1, 0, 0, #options * 30 + 10)
+            }, 0.2)
+        else
+            SmoothTween(dropdownList, {
+                Size = UDim2.new(1, 0, 0, 0)
+            }, 0.2, nil, nil, function()
+                dropdownList.Visible = false
+            end)
+        end
+    end
+    
+    -- Criar itens do dropdown
+    for i, option in ipairs(options) do
+        local optionButton = Create("TextButton", {
+            Name = option,
+            Text = option,
+            TextColor3 = self.Theme.Text,
+            TextSize = 14,
+            Font = Enum.Font.Gotham,
+            BackgroundColor3 = self.Theme.Secondary,
+            Size = UDim2.new(1, -10, 0, 30),
+            Position = UDim2.new(0, 5, 0, 0),
+            LayoutOrder = i,
+            Parent = dropdownList
+        })
+        
+        local optionCorner = Create("UICorner", {
+            CornerRadius = UDim.new(0, 5),
+            Parent = optionButton
+        })
+        
+        optionButton.MouseButton1Click:Connect(function()
+            dropdownButton.Text = option
+            toggleDropdown()
+            
+            if callback then
+                callback(option)
+            end
+        end)
+        
+        self:AddHoverEffect(optionButton, self.Theme.Hover)
+    end
+    
+    dropdownButton.MouseButton1Click:Connect(toggleDropdown)
+    
+    -- Efeito hover
+    self:AddHoverEffect(dropdownButton, self.Theme.Hover)
+    
+    -- Fechar dropdown ao clicar fora
+    UserInputService.InputBegan:Connect(function(input, processed)
+        if not processed and input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if isOpen and not dropdownButton:IsDescendantOf(input:GetMouseTarget()) then
+                toggleDropdown()
+            end
+        end
+    end)
+    
+    return {
+        SetOptions = function(newOptions, keepSelection)
+            -- Implementar atualização de opções
+        end,
+        GetSelected = function()
+            return dropdownButton.Text
+        end
+    }
+end
+
+-- Adicionar label
+function UltraUI:AddLabel(parent, text)
+    local label = Create("TextLabel", {
+        Name = text,
+        Text = text,
+        TextColor3 = self.Theme.Text,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -20, 0, 20),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = parent
+    })
+    
+    return label
+end
+
+-- Adicionar slider
+function UltraUI:AddSlider(parent, text, min, max, default, callback)
+    local sliderFrame = Create("Frame", {
+        Name = text,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -20, 0, 50),
+        Parent = parent
+    })
+    
+    local label = Create("TextLabel", {
+        Name = "Label",
+        Text = text,
+        TextColor3 = self.Theme.Text,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 20),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = sliderFrame
+    })
+    
+    local valueLabel = Create("TextLabel", {
+        Name = "Value",
+        Text = tostring(default or min),
+        TextColor3 = self.Theme.Text,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0, 50, 0, 20),
+        Position = UDim2.new(1, -50, 0, 0),
+        TextXAlignment = Enum.TextXAlignment.Right,
+        Parent = sliderFrame
+    })
+    
+    local sliderTrack = Create("Frame", {
+        Name = "Track",
+        BackgroundColor3 = self.Theme.Secondary,
+        Size = UDim2.new(1, 0, 0, 5),
+        Position = UDim2.new(0, 0, 1, -15),
+        Parent = sliderFrame
+    })
+    
+    local trackCorner = Create("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = sliderTrack
+    })
+    
+    local sliderFill = Create("Frame", {
+        Name = "Fill",
+        BackgroundColor3 = self.Theme.Accent,
+        Size = UDim2.new(0, 0, 1, 0),
+        Parent = sliderTrack
+    })
+    
+    local fillCorner = Create("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = sliderFill
+    })
+    
+    local sliderThumb = Create("Frame", {
+        Name = "Thumb",
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        Size = UDim2.new(0, 15, 0, 15),
+        Position = UDim2.new(0, 0, 0.5, -7.5),
+        AnchorPoint = Vector2.new(0, 0.5),
+        Parent = sliderTrack
+    })
+    
+    local thumbCorner = Create("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = sliderThumb
+    })
+    
+    local isDragging = false
+    local currentValue = default or min
+    
+    local function updateSlider(value)
+        currentValue = math.clamp(value, min, max)
+        local percent = (currentValue - min) / (max - min)
+        
+        valueLabel.Text = tostring(math.floor(currentValue))
+        SmoothTween(sliderFill, {Size = UDim2.new(percent, 0, 1, 0)}, 0.1)
+        SmoothTween(sliderThumb, {
+            Position = UDim2.new(percent, -7.5, 0.5, -7.5)
+        }, 0.1)
+        
+        if callback then
+            callback(currentValue)
+        end
+    end
+    
+    -- Configurar arrasto
+    sliderThumb.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = true
+        end
+    end)
+    
+    sliderThumb.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = false
+        end
+    end)
+    
+    sliderTrack.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = true
+            local percent = (input.Position.X - sliderTrack.AbsolutePosition.X) / sliderTrack.AbsoluteSize.X
+            updateSlider(min + (max - min) * percent)
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local percent = (input.Position.X - sliderTrack.AbsolutePosition.X) / sliderTrack.AbsoluteSize.X
+            updateSlider(min + (max - min) * percent)
+        end
+    end)
+    
+    -- Inicializar com valor padrão
+    updateSlider(default or min)
+    
+    return {
+        SetValue = function(value)
+            updateSlider(value)
+        end,
+        GetValue = function()
+            return currentValue
+        end
+    }
+end
+
+-- Adicionar seção
+function UltraUI:AddSection(parent, text)
+    local sectionFrame = Create("Frame", {
+        Name = text,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -20, 0, 40),
+        Parent = parent
+    })
+    
+    local label = Create("TextLabel", {
+        Name = "Label",
+        Text = text,
+        TextColor3 = self.Theme.Text,
+        TextSize = 16,
+        Font = Enum.Font.GothamSemibold,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 20),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = sectionFrame
+    })
+    
+    local line = Create("Frame", {
+        Name = "Line",
+        BackgroundColor3 = self.Theme.Accent,
+        Size = UDim2.new(1, 0, 0, 2),
+        Position = UDim2.new(0, 0, 1, -10),
+        Parent = sectionFrame
+    })
+    
+    return sectionFrame
+end
+
+-- Função para mostrar a UI
+function UltraUI:Show()
+    self.ScreenGui.Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+    
+    -- Animação de entrada
+    self.MainFrame.Size = UDim2.new(0, 0, 0, 0)
+    SmoothTween(self.MainFrame, {
+        Size = UDim2.new(0, self.Size.X, 0, self.Size.Y)
+    }, 0.5, Enum.EasingStyle.Back)
+end
+
+return UltraUI
